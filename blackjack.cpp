@@ -9,10 +9,10 @@ double value_fn(char card) {  // input should be 2,3,4,5,6,7,8,9,T,J,Q,K or A
     return card - '0';
 }
 
-double dealer_check(int my_points, int dealer_points, bool dealer_can_reduce) {
+double dealer_check(int my_points, int dealer_points, int dealer_can_reduce) {
     if (my_points > 21) return -1.0;
     if (dealer_points > 21) {
-        if (dealer_can_reduce) return dealer_check(my_points, dealer_points - 10, false);
+        if (dealer_can_reduce > 0) return dealer_check(my_points, dealer_points - 10, dealer_can_reduce - 1);
         return 1.0;
     }
     if (dealer_points >= 17) {
@@ -22,7 +22,7 @@ double dealer_check(int my_points, int dealer_points, bool dealer_can_reduce) {
     }
     double result = 0.0;
     for (int r = 0; r < 13; r++)
-        result += dealer_check(my_points, dealer_points + VALUES[r], dealer_can_reduce || (r == 12)) / 13.0;
+        result += dealer_check(my_points, dealer_points + VALUES[r], dealer_can_reduce + ((r == 12) ? 1 : 0)) / 13.0;
     return result;
 }
 
