@@ -26,10 +26,10 @@ double dealer_check(int my_points, int dealer_points, int dealer_can_reduce) {
     return result;
 }
 
-double best_strategy(int my_points, bool can_reduce, bool can_split, bool can_double, int dealer_points, bool dealer_can_reduce, bool printing) {
+double best_strategy(int my_points, int can_reduce, bool can_split, bool can_double, int dealer_points, bool dealer_can_reduce, bool printing) {
     if (my_points > 21) {
-        if (!can_reduce) return -1.0;
-        return best_strategy(my_points - 10, false, false, can_double, dealer_points, dealer_can_reduce, false);
+        if (can_reduce <= 0) return -1.0;
+        return best_strategy(my_points - 10, can_reduce - 1, false, can_double, dealer_points, dealer_can_reduce, false);
     }
     if ((my_points == 21) && (can_double)) {
         double value_if_blackjack = 0.0;
@@ -43,12 +43,12 @@ double best_strategy(int my_points, bool can_reduce, bool can_split, bool can_do
         return value_if_blackjack;
     }
 
-    double best_result = std::numeric_limits<double>::min();
+    double best_result = -3.0;
 
     // hit
     double value_if_hit = 0.0;
     for (int r = 0; r < 13; r++)
-        value_if_hit += best_strategy(my_points + VALUES[r], can_reduce || (r == 12), false, false, dealer_points, dealer_can_reduce, false) / 13.0;
+        value_if_hit += best_strategy(my_points + VALUES[r], can_reduce + ((r == 12) ? 1 : 0), false, false, dealer_points, dealer_can_reduce, false) / 13.0;
     best_result = max(best_result, value_if_hit);
     if (printing)
         cout << "if hit we get EV: " << fixed << setprecision(3) << value_if_hit << "\n";
@@ -62,7 +62,10 @@ double best_strategy(int my_points, bool can_reduce, bool can_split, bool can_do
     // split
     double value_if_split = 0.0;
     if (can_split) {
-        value_if_split = 2.0 * best_strategy(my_points / 2, can_reduce, false, false, dealer_points, dealer_can_reduce, false);
+        if (can_reduce == 2)  // for "AA" case
+            value_if_split = 2.0 * best_strategy(11, 1, false, false, dealer_points, dealer_can_reduce, false);
+        else
+            value_if_split = 2.0 * best_strategy(my_points / 2, 0, false, false, dealer_points, dealer_can_reduce, false);
         best_result = max(best_result, value_if_split);
         if (printing)
             cout << "if split we get EV: " << fixed << setprecision(3) << value_if_split << "\n";
@@ -73,7 +76,7 @@ double best_strategy(int my_points, bool can_reduce, bool can_split, bool can_do
     if (can_double) {
         for (int r = 0; r < 13; r++) {
             int ace_points = my_points + VALUES[r];
-            if ((ace_points > 21) && (can_reduce || (r == 12))) ace_points -= 10;
+            if ((ace_points > 21) && ((can_reduce > 0) || (r == 12))) ace_points -= 10;
             value_if_double += 2.0 * dealer_check(ace_points, dealer_points, dealer_can_reduce) / 13.0;
         }
         best_result = max(best_result, value_if_double);
@@ -93,11 +96,11 @@ int main()
     cin >> dealer_card;  // for example "A" or "3" (just one character)
 
     int my_points = 0;
-    bool can_reduce = false;
+    int can_reduce = 0;
     for (char card : my_cards) {
         my_points += value_fn(card);
-        can_reduce |= (card == 'A');
-        if (my_points > 21) { my_points -= 10; can_reduce = false; }
+        can_reduce += ((card == 'A') ? 1 : 0);
+        if (my_points > 21) { my_points -= 10; can_reduce--; }
     }
     bool can_split = ((my_cards.length() == 2) && (my_cards[0] == my_cards[1]));
     bool can_double = (my_cards.length() == 2);
